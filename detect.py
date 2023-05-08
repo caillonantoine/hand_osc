@@ -1,8 +1,10 @@
 import logging
+import pickle as pk
 from time import time
 
 import cv2
 import mediapipe as mp
+import numpy as np
 from absl import app, flags
 from pythonosc import osc_bundle_builder, osc_message_builder, udp_client
 
@@ -14,6 +16,39 @@ flags.DEFINE_integer("device", default=0, help="camera to use")
 flags.DEFINE_string("address", default="127.0.0.1", help="ip to send osc to")
 flags.DEFINE_integer("port", default=1893, help="port to send osc to")
 flags.DEFINE_bool("show", default=False, help="show camera output")
+
+
+def center_hand(hand):
+    center = hand[0]
+    thumb_base = hand[2]
+    major_base = hand[9]
+    major_tip = hand[12]
+    
+
+    ax1 = thumb_base - center
+    ax2 = major_base - center
+    ax3 = major_tip - center
+
+    scale = np.linalg.norm(ax2)
+
+    ax1 = ax1 / np.linalg.norm(ax1, ord=2)
+    ax2 = ax2 / np.linalg.norm(ax2, ord=2)
+    ax3 = ax3 / np.linalg.norm(ax3, ord=2)
+
+    ax2 = ax2 - np.dot(ax1, ax2) * ax1
+    ax2 = ax2 / np.linalg.norm(ax2, ord=2)
+
+    ax3 = ax3 - np.dot(ax1, ax3) * ax1
+    ax3 = ax3 / np.linalg.norm(ax3, ord=2)
+
+    ax3 = ax3 - np.dot(ax2, ax3) * ax2
+    ax3 = ax3 / np.linalg.norm(ax3, ord=2)
+
+    basis = np.stack([ax1, ax2, ax3], 0)
+
+    new_hand = np.einsum("oi,li->lo", basis, hand - center)
+
+    return new_hand / scale
 
 
 def main(argv):
@@ -61,14 +96,17 @@ def main(argv):
             for hand, landmarks in zip(result.handedness,
                                        result.hand_landmarks):
                 left_right = hand[0].category_name.lower()
-                for i, landmark in enumerate(landmarks):
+                hand = list(map(lambda x: [x.x, x.y, x.z], landmarks))
+                hand = np.asarray(hand)
+                hand = center_hand(hand)
+                for i, landmark in enumerate(hand):
                     msg = osc_message_builder.OscMessageBuilder(
                         address="/hand")
                     msg.add_arg(left_right)
                     msg.add_arg(i)
-                    msg.add_arg(landmark.x)
-                    msg.add_arg(landmark.y)
-                    msg.add_arg(landmark.z)
+                    msg.add_arg(landmark[0])
+                    msg.add_arg(landmark[1])
+                    msg.add_arg(landmark[2])
                     bundle.add_content(msg.build())
             client.send(bundle.build())
 
