@@ -19,11 +19,13 @@ flags.DEFINE_bool("show", default=False, help="show camera output")
 
 
 def center_hand(hand):
+    """centers, normalize and reproject hand on a 
+    position invariant orthogonal basis"""
+    
     center = hand[0]
     thumb_base = hand[2]
     major_base = hand[9]
     major_tip = hand[12]
-    
 
     ax1 = thumb_base - center
     ax2 = major_base - center
@@ -31,24 +33,30 @@ def center_hand(hand):
 
     scale = np.linalg.norm(ax2)
 
+    # normalize axes
     ax1 = ax1 / np.linalg.norm(ax1, ord=2)
     ax2 = ax2 / np.linalg.norm(ax2, ord=2)
     ax3 = ax3 / np.linalg.norm(ax3, ord=2)
 
-    ax2 = ax2 - np.dot(ax1, ax2) * ax1
-    ax2 = ax2 / np.linalg.norm(ax2, ord=2)
+    # orthogonalize ax1 w.r.t ax2
+    ax1 = ax1 - np.dot(ax1, ax2) * ax2
+    ax1 = ax1 / np.linalg.norm(ax1, ord=2)
 
+    # orthogonalize ax3 w.r.t ax1 and ax2
     ax3 = ax3 - np.dot(ax1, ax3) * ax1
     ax3 = ax3 / np.linalg.norm(ax3, ord=2)
-
     ax3 = ax3 - np.dot(ax2, ax3) * ax2
     ax3 = ax3 / np.linalg.norm(ax3, ord=2)
 
+    # create basis
     basis = np.stack([ax1, ax2, ax3], 0)
 
+    # project and scale hand
     new_hand = np.einsum("oi,li->lo", basis, hand - center)
+    new_hand =  new_hand / scale
 
-    return new_hand / scale
+    return new_hand
+
 
 
 def main(argv):
