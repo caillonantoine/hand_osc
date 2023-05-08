@@ -11,12 +11,12 @@ logging.basicConfig(level=logging.INFO)
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("device", default=0, help="camera to use")
+flags.DEFINE_string("address", default="127.0.0.1", help="ip to send osc to")
+flags.DEFINE_integer("port", default=1893, help="port to send osc to")
 flags.DEFINE_bool("show", default=False, help="show camera output")
 
 
 def main(argv):
-    vid = cv2.VideoCapture(1)
-
     model_path = 'hand_landmarker.task'
 
     BaseOptions = mp.tasks.BaseOptions
@@ -25,7 +25,7 @@ def main(argv):
     HandLandmarkerResult = mp.tasks.vision.HandLandmarkerResult
     VisionRunningMode = mp.tasks.vision.RunningMode
 
-    client = udp_client.SimpleUDPClient("127.0.0.1", port=1893)
+    client = udp_client.SimpleUDPClient(FLAGS.address, port=FLAGS.port)
 
     def get_ms_counter():
         start = time()
