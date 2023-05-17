@@ -1,5 +1,4 @@
 import logging
-import pickle as pk
 from time import time
 
 import cv2
@@ -21,7 +20,7 @@ flags.DEFINE_bool("show", default=False, help="show camera output")
 def center_hand(hand):
     """centers, normalize and reproject hand on a 
     position invariant orthogonal basis"""
-    
+
     center = hand[0]
     thumb_base = hand[2]
     major_base = hand[9]
@@ -53,10 +52,9 @@ def center_hand(hand):
 
     # project and scale hand
     new_hand = np.einsum("oi,li->lo", basis, hand - center)
-    new_hand =  new_hand / scale
+    new_hand = new_hand / scale
 
     return new_hand
-
 
 
 def main(argv):
