@@ -22,3 +22,10 @@ Configure the address and port of the osc target using `--address` and `--port`
 ```bash
 python detect.py --device 2 --address 127.0.0.1 --port 1893
 ```
+
+Optionally, you can smooth the detection by adding an exponentially moving average factor between 0 and 1.
+
+```bash
+python detect.py --device 2 --ema .6
+```
+
