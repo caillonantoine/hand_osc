@@ -15,6 +15,9 @@ flags.DEFINE_integer("device", default=0, help="camera to use")
 flags.DEFINE_string("address", default="127.0.0.1", help="ip to send osc to")
 flags.DEFINE_integer("port", default=1893, help="port to send osc to")
 flags.DEFINE_bool("show", default=False, help="show camera output")
+flags.DEFINE_float("ema",
+                   default=0.,
+                   help="exponential factor to smooth detection.")
 
 
 def center_hand(hand):
@@ -68,6 +71,8 @@ def main(argv):
 
     client = udp_client.SimpleUDPClient(FLAGS.address, port=FLAGS.port)
 
+    hand_avg = {}
+
     def get_ms_counter():
         start = time()
 
@@ -105,6 +110,13 @@ def main(argv):
                 hand = list(map(lambda x: [x.x, x.y, x.z], landmarks))
                 hand = np.asarray(hand)
                 hand = center_hand(hand)
+
+                if left_right in hand_avg:
+                    hand = FLAGS.ema * hand_avg[left_right] + (
+                        1 - FLAGS.ema) * hand
+
+                hand_avg[left_right] = hand
+
                 for i, landmark in enumerate(hand):
                     msg = osc_message_builder.OscMessageBuilder(
                         address="/hand")
